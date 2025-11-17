@@ -15,7 +15,7 @@ def _post_to_slack(text: str) -> None:
    Using Python's stdlib HTTP client avoids shell / URL quoting issues
    (especially on Windows) that were causing curl errors.
    """
-   webhook_url = "https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXX
+   webhook_url = "https://hooks.slack.com/services/XXXXXX/XXXXXX/XXXXXX"
    payload = {
       "channel": "#notifications",
       "username": "alert",
@@ -110,9 +110,13 @@ def main(argv):
    # Notify Slack that the scan has started
    slack_scan_started(ip)
 
-   # Run nmap scan
-   os.system(f'nmap {flags} {ip} -oG "{gnmap_file}" > NUL 2>&1')
-   
+   # Run nmap scan (suppressing stdout/stderr in a cross-platform way)
+   devnull = 'NUL' if os.name == 'nt' else '/dev/null'
+   exit_code = os.system(f'nmap {flags} {ip} -oG "{gnmap_file}" > {devnull} 2>&1')
+
+   if exit_code != 0:
+      print(f"Error: nmap command failed with exit code {exit_code}. Check that nmap is installed and your flags/targets are correct.")
+
    # Process gnmap file to extract host information (grep equivalent)
    try:
       with open(gnmap_file, 'r') as f_in, open(txt_file, 'w') as f_out:
